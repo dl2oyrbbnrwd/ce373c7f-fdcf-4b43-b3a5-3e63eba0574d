@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Nolevka" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+<PropertyGroup>
+	<ExtensionTasksPath>$(MSBuildThisFileDirectory)\MSBuildExtensionPack\</ExtensionTasksPath>
+	<CommunityTasksPath>$(MSBuildThisFileDirectory)\MSBuildCommunityTasks\</CommunityTasksPath>
+        <SolutionFile>$(MSBuildThisFileDirectory)\Solution.sln</SolutionFile>
+        <ReleaseLocation Condition="'$(ReleaseLocation)' == ''">$(MSBuildThisFileDirectory)\release\</ReleaseLocation>
+</PropertyGroup>
+
+<ItemGroup>
+        <Namespaces Include="msbuild">
+            <Prefix>a</Prefix>
+            <Uri>http://schemas.microsoft.com/developer/msbuild/2003</Uri>
+        </Namespaces>
+</ItemGroup>
+
+<Import Project="$(ExtensionTasksPath)MSBuild.ExtensionPack.tasks"/>
+<Import Project="$(CommunityTasksPath)MSBuild.Community.Tasks.Targets"/>
+    
+<Target Name="Nolevka" >
+
+    <MSBuild.Community.Tasks.GetSolutionProjects Solution="$(SolutionFile)">
+      <Output ItemName="SolutionFiles" TaskParameter="Output" />
+    </MSBuild.Community.Tasks.GetSolutionProjects>
+
+    <!-- Modify project setting to enable debug symbols in release configuration of the projects -->
+
+    <MSBuild.ExtensionPack.Xml.XmlFile 
+           TaskAction="RemoveElement" 
+           Namespaces="@(Namespaces)"
+           File="%(SolutionFiles.FullPath)" 
+           XPath="/a:Project/a:PropertyGroup[contains(@Condition,'Release')]/a:DebugSymbols"
+    />
+
+    <MSBuild.ExtensionPack.Xml.XmlFile 
+           TaskAction="AddElement"
+           Namespaces="@(Namespaces)"
+           File="%(SolutionFiles.FullPath)"
+           Element="DebugSymbols"
+           InnerText="true" 
+           XPath="/a:Project/a:PropertyGroup[contains(@Condition,'Release')]"
+    />
+
+    <!-- Build code in release configuration -->
+    
+    <MSBuild 
+            Projects="$(SolutionFile)" 
+            Properties="Configuration=Release;Platform=x64;OutDir=$(MSBuildThisFileDirectory)\result\"
+            Targets="Build" 
+    />
+
+    <!-- Calculate output files hashes for all binaries/assemblies and make hash/files manifest (xml or json for example) -->
+
+    <CreateItem Include="$(MSBuildThisFileDirectory)\result\*.exe;$(MSBuildThisFileDirectory)\result\*.dll">
+      <Output ItemName="ExecutableFiles" TaskParameter="Include" />
+    </CreateItem>
+
+    <GetFileHash Files="@(ExecutableFiles)">
+      <Output
+          TaskParameter="Items"
+          ItemName="ExecutableHashes" />
+    </GetFileHash>
+
+    <ItemGroup>
+      <Hashes Include="&lt;files&gt;"/>
+      <Hashes Include="@(ExecutableHashes->'&lt;file name=&quot;%(Filename)%(Extension)&quot; hash=&quot;%(FileHash)&quot; /&gt;')"/>
+      <Hashes Include="&lt;/files&gt;"/>
+    </ItemGroup>
+    <WriteLinesToFile File="$(MSBuildThisFileDirectory)\result\manifest.xml" Lines="@(Hashes)" Overwrite="true" />
+
+    <MakeDir Directories="$(ReleaseLocation)"/>
+
+    <MakeDir Directories="$(ReleaseLocation)\Symbols\"/>
+
+    <!-- Make a zip archive including all binaries/assemblies and generated manifest (use 7zip, Windows built in or any other) -->
+
+     <MSBuild.ExtensionPack.Compression.Zip 
+            TaskAction="Create" 
+            CompressFiles="@(ExecutableFiles);$(MSBuildThisFileDirectory)\result\manifest.xml"
+            RemoveRoot="$(MSBuildThisFileDirectory)\result\" 
+            ZipFileName="$(ReleaseLocation)\archive.zip"/>
+
+    <!-- Copy resulted pdbs into a separate folder called Symbols in the same release location, saving original folder hierarchy. -->
+
+    <CreateItem Include="$(MSBuildThisFileDirectory)\result\*.pdb">
+      <Output ItemName="PdbFiles" TaskParameter="Include" />
+    </CreateItem>
+
+    <Copy SourceFiles="@(PdbFiles)" DestinationFolder="$(ReleaseLocation)\Symbols\" />
+
+</Target>
+
+</Project>

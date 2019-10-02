@@ -1,0 +1,153 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>MSBuild.ExtensionPack.TaskFactory.Dlr</name>
+    </assembly>
+    <members>
+        <member name="T:MSBuild.ExtensionPack.TaskFactory.DlrTask">
+            <summary>
+            A task that executes a custom script.
+            </summary>
+            <remarks>
+            This task can implement <see cref="T:Microsoft.Build.Framework.IGeneratedTask"/> to support task properties
+            that are defined in the script itself and not known at compile-time of this task factory.
+            </remarks>
+        </member>
+        <member name="M:MSBuild.ExtensionPack.TaskFactory.DlrTask.#ctor(MSBuild.ExtensionPack.TaskFactory.DlrTaskFactory,System.Xml.Linq.XElement,Microsoft.Build.Framework.IBuildEngine)">
+            <summary>
+            Initializes a new instance of the <see cref="T:MSBuild.ExtensionPack.TaskFactory.DlrTask"/> class.
+            </summary>
+            <param name="factory">The Factory</param>
+            <param name="xmlElement">The XElement</param>
+            <param name="taskFactoryLoggingHost">The taskFactoryLoggingHost</param>
+        </member>
+        <member name="M:MSBuild.ExtensionPack.TaskFactory.DlrTask.Execute">
+            <summary>
+            When overridden in a derived class, executes the task.
+            </summary>
+            <returns>
+            true if the task successfully executed; otherwise, false.
+            </returns>
+        </member>
+        <member name="M:MSBuild.ExtensionPack.TaskFactory.DlrTask.GetPropertyValue(Microsoft.Build.Framework.TaskPropertyInfo)">
+            <summary>
+            Gets the property value.
+            </summary>
+            <param name="property">The property.</param>
+            <returns>The value of the property.</returns>
+        </member>
+        <member name="M:MSBuild.ExtensionPack.TaskFactory.DlrTask.SetPropertyValue(Microsoft.Build.Framework.TaskPropertyInfo,System.Object)">
+            <summary>
+            Sets the property value.
+            </summary>
+            <param name="property">The property.</param>
+            <param name="value">The value to set.</param>
+        </member>
+        <member name="M:MSBuild.ExtensionPack.TaskFactory.DlrTask.Dispose">
+            <summary>
+            Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+            </summary>
+        </member>
+        <member name="M:MSBuild.ExtensionPack.TaskFactory.DlrTask.Dispose(System.Boolean)">
+            <summary>
+            Releases unmanaged and - optionally - managed resources
+            </summary>
+            <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+        </member>
+        <member name="T:MSBuild.ExtensionPack.TaskFactory.DlrTaskFactory">
+            <summary>
+            A task factory that enables inline scripts to execute as part of an MSBuild-based build.
+            </summary>
+            <example>
+            <code lang="xml"><![CDATA[
+            <?xml version="1.0" encoding="utf-8"?>
+            <Project ToolsVersion="4.0"
+                     DefaultTargets="Build"
+                     xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+              <UsingTask
+                TaskName="HelloWorld"
+                TaskFactory="DlrTaskFactory"
+                AssemblyFile="$(TaskFactoryPath)MSBuild.ExtensionPack.TaskFactory.Dlr.dll">
+                <ParameterGroup>
+                  <Name Required="true"/>
+                  <TaskMessage Output="true"/>
+                </ParameterGroup>
+                <Task>
+                  <Code Type="Fragment"
+                        Language="rb">
+                       <!-- Make this a proper CDATA section before running. -->
+                    [CDATA[
+                    self.task_message = "Hello #{name} from Ruby".to_clr_string
+                    log.log_message(task_message);
+                    ]
+                  </Code>
+                </Task>
+              </UsingTask>
+              <PropertyGroup>
+                <YourName Condition=" '$(YourName)'=='' ">World</YourName>
+              </PropertyGroup>
+              <Target Name="Build">
+                <HelloWorld Name="$(YourName)">
+                  <Output PropertyName="RubyOut"
+                          TaskParameter="TaskMessage"/>
+                </HelloWorld>
+                <Message Text="Message from task: $(RubyOut)"
+                         Importance="high" />
+              </Target>
+            </Project>
+            ]]></code>
+            </example>
+        </member>
+        <member name="F:MSBuild.ExtensionPack.TaskFactory.DlrTaskFactory.parameterGroup">
+            <summary>
+            The in and out parameters of the generated tasks.
+            </summary>
+        </member>
+        <member name="F:MSBuild.ExtensionPack.TaskFactory.DlrTaskFactory.taskXml">
+            <summary>
+            The body of the script to execute.
+            </summary>
+        </member>
+        <member name="P:MSBuild.ExtensionPack.TaskFactory.DlrTaskFactory.FactoryName">
+            <summary>
+            Gets the name of the factory.
+            </summary>
+            <value>The name of the factory.</value>
+        </member>
+        <member name="P:MSBuild.ExtensionPack.TaskFactory.DlrTaskFactory.TaskType">
+            <summary>
+            Gets the type of the task.
+            </summary>
+            <value>The type of the task.</value>
+        </member>
+        <member name="M:MSBuild.ExtensionPack.TaskFactory.DlrTaskFactory.Initialize(System.String,System.Collections.Generic.IDictionary{System.String,Microsoft.Build.Framework.TaskPropertyInfo},System.String,Microsoft.Build.Framework.IBuildEngine)">
+            <summary>
+            Initialize
+            </summary>
+            <param name="taskName">Name of task</param>
+            <param name="parameterGroup">IDictionary</param>
+            <param name="taskBody">Body of task</param>
+            <param name="taskFactoryLoggingHost">IBuildEngine</param>
+            <returns>bool</returns>
+        </member>
+        <member name="M:MSBuild.ExtensionPack.TaskFactory.DlrTaskFactory.CreateTask(Microsoft.Build.Framework.IBuildEngine)">
+            <summary>
+            Creates the task.
+            </summary>
+            <param name="taskFactoryLoggingHost">The task factory logging host.</param>
+            <returns>ITask item</returns>
+        </member>
+        <member name="M:MSBuild.ExtensionPack.TaskFactory.DlrTaskFactory.CleanupTask(Microsoft.Build.Framework.ITask)">
+            <summary>
+            Cleans up the task.
+            </summary>
+            <param name="task">The task.</param>
+        </member>
+        <member name="M:MSBuild.ExtensionPack.TaskFactory.DlrTaskFactory.GetTaskParameters">
+            <summary>
+            Gets the task parameters.
+            </summary>
+            <returns>TaskPropertyInfo[]</returns>
+        </member>
+    </members>
+</doc>
